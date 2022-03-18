@@ -286,7 +286,7 @@ from dwd.t07_access_device_anti_fraud_ia_d t
     left join config
     on s3.rule_id = config.rule_id
 where
-    to_date(cast(operation_time as timestamp)) between '2022-03-02' and '2022-03-16'
+    to_date(cast(operation_time as timestamp)) between '2022-03-08' and '2022-03-16'
 order by time_of_action
 )
 
