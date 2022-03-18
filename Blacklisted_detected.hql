@@ -134,7 +134,7 @@ dim_subscene as (
       103710,"PIN",
       103711,"FacialVerification",
       103712,"NRIC",
-      103713,"Mobile",
+      103713,"Mobile", 
       103714,"MobileNRIC",
       103715,"CheckNRIC",
       103716,"NotOnboarded+LinkedDevice",
@@ -245,62 +245,3 @@ dim_status as (
     )) as (code, status)
 ),
 
-config as(
-    select rule_id, review_priority
-    from ods.mbs_sg_seabank_anti_fraud_db_rule_config_tab_ss
-    where pt_date = date_sub(current_date,1)
-),
-
-il as (
-select
-    t.id,  --Newly added column
-    t.uid,
-    customer_id,
-    s1.status final_result,
-    identify_status antifraud_result,
-    identify_reason antifraud_result_details,
-    s3.rule_id,
-    rule_name,
-    t.anti_fraud_trace_id,
-    t.log_trace_id log_trace_id,
-    to_date(cast(operation_time as timestamp)) time_of_action,
-    case when to_date(cast(operation_time as timestamp)) > date_sub('2022-03-16', 7) then 'current week'
-        else 'previous week' end as trigger_time,
-    scenario_l1,
-    scenario_l2,
-    config.review_priority as priority
-    --row_number() over(order by cast(operation_time as timestamp)) as rnk
-from dwd.t07_access_device_anti_fraud_ia_d t
-    left join dim_scenario
-    on t.operation_scene = dim_scenario.operation_scene
-    left join dim_subscene
-    on t.sub_scene = dim_subscene.sub_scene
-    left join dim_operation_info
-    on t.operation_info = dim_operation_info.operation_info
-    left join dim_status s1
-    on t.status = s1.code
-    left join dim_status s2
-    on t.identify_status = s2.code
-    left join (select * from ods.mbs_sg_seabank_anti_fraud_db_rule_trigger_log_tab_ss where pt_date = date_sub(current_date, 1)) s3
-    on t.anti_fraud_trace_id = s3.anti_fraud_trace_id
-    left join config
-    on s3.rule_id = config.rule_id
-where
-    to_date(cast(operation_time as timestamp)) between '2022-03-08' and '2022-03-16'
-order by time_of_action
-)
-
-select
-trigger_time,
-final_result,
-antifraud_result,
-antifraud_result_details,
-scenario_l1,
-il.rule_id as rule_id,
-il.priority,
-count(antifraud_result_details) as cnt_action ,
-count(distinct uid) cnt_user
-from il
-where antifraud_result_details = 'Blacklist detected'
-group by trigger_time, final_result, antifraud_result, antifraud_result_details, scenario_l1, il.rule_id, il.priority
-order by trigger_time, antifraud_result_details, rule_id
