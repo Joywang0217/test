@@ -404,8 +404,6 @@ GROUP BY trigger_time,fv.con_rule_id, review_priority, scenario_l1
 ),
 
 --query for col I
-
-combined as(
 select
 fv_result.trigger_time as trigger_time,
 fv_result.rule_id as rule_id,
@@ -417,33 +415,3 @@ from fv_result
 GROUP BY trigger_time,rule_id,review_priority,scenario_l1
 
 
-UNION ALL
-
-select
-fr_result.trigger_time as trigger_time,
-fr_result.rule_id as rule_id,
-fr_result.review_priority as review_priority,
-fr_result.scenario_l1 as scenario_l1,
-sum(cnt_action) as action,
-sum(cnt_user) as users
-from fr_result
-where rule_id not like 'C%'
-group by trigger_time,rule_id,scenario_l1,review_priority
-
-UNION ALL
-
-select il_result.trigger_time as trigger_time,
-il_result.rule as rule_id,
-il_result.priority as review_priority,
-il_result.scenario_l1 as scenario_l1,
-sum(il_result.cnt_action) as action,
-sum (il_result.cnt_user) as users
-from il_result
-where il_result.rule in ('C0022','C0023','C0024')
-and il_result.final_result = 'Fail'
-and il_result.antifraud_result = '1'
-group by trigger_time,scenario_l1, rule,il_result.priority)
-
-select * , (case when scenario_l1 in ('Login','ForgotPassword','AppleSignInRegistration','ShopeeLinkageRegistration','HelpCenterFacialVerification','Registration') then 'pre-login' else 'retail' end) segments
-from combined
-order by trigger_time,rule_id,scenario_l1,review_priority
